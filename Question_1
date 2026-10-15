@@ -1,0 +1,150 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class CourseRegistrationPortal {
+
+    public static void main(String[] args) {
+        CourseRegistrationPortal portal = new CourseRegistrationPortal();
+
+        Course introCS = new Course("CS101", "Intro to CS", 2);
+        Course dataStructures = new Course("CS201", "Data Structures", 2);
+        dataStructures.addPrerequisite("CS101");
+
+        portal.addCourse(introCS);
+        portal.addCourse(dataStructures);
+
+        System.out.println(portal.registerStudent("STU001", "CS201")); 
+
+        portal.addStudentHistory("STU001", "CS101");
+        portal.addStudentHistory("STU002", "CS101");
+        portal.addStudentHistory("STU003", "CS101");
+        portal.addStudentHistory("STU004", "CS101");
+
+        System.out.println(portal.registerStudent("STU001", "CS201")); 
+        System.out.println(portal.registerStudent("STU002", "CS201")); 
+
+        System.out.println(portal.registerStudent("STU003", "CS201")); 
+        System.out.println(portal.registerStudent("STU004", "CS201")); 
+        
+        portal.displayCourseStatus("CS201");
+
+        System.out.println(portal.dropStudent("STU001", "CS201")); 
+        
+        portal.displayCourseStatus("CS201");
+    }
+
+    private Map<String, Course> courseCatalog;
+    private Map<String, Set<String>> studentCompletedCourses;
+
+    public CourseRegistrationPortal() {
+        this.courseCatalog = new HashMap<>();
+        this.studentCompletedCourses = new HashMap<>();
+    }
+
+    public void addCourse(Course course) {
+        courseCatalog.put(course.getCourseCode(), course);
+    }
+
+    public void addStudentHistory(String studentId, String courseCode) {
+        studentCompletedCourses.computeIfAbsent(studentId, k -> new HashSet<>()).add(courseCode);
+    }
+
+    public String registerStudent(String studentId, String courseCode) {
+        Course course = courseCatalog.get(courseCode);
+        if (course == null) {
+            return "Registration Failed: Course " + courseCode + " does not exist.";
+        }
+
+        if (course.getEnrolledStudents().contains(studentId)) {
+            return "Status: Student " + studentId + " is already enrolled in " + courseCode + ".";
+        }
+        if (course.getWaitlist().contains(studentId)) {
+            return "Status: Student " + studentId + " is already on the waitlist for " + courseCode + ".";
+        }
+
+        Set<String> completed = studentCompletedCourses.getOrDefault(studentId, new HashSet<>());
+        for (String prereq : course.getPrerequisites()) {
+            if (!completed.contains(prereq)) {
+                return "Registration Failed: Missing prerequisite " + prereq + " for course " + courseCode + ".";
+            }
+        }
+
+        if (!course.isFull()) {
+            course.getEnrolledStudents().add(studentId);
+            return "Success: Student " + studentId + " successfully enrolled in " + courseCode + ".";
+        } else {
+            course.getWaitlist().addLast(studentId);
+            return "Waitlisted: Course " + courseCode + " is full. Student " + studentId + " added to the waitlist.";
+        }
+    }
+
+    public String dropStudent(String studentId, String courseCode) {
+        Course course = courseCatalog.get(courseCode);
+        if (course == null) {
+            return "Error: Course " + courseCode + " does not exist.";
+        }
+
+        if (course.getWaitlist().remove(studentId)) {
+            return "Success: Student " + studentId + " removed from the waitlist of " + courseCode + ".";
+        }
+
+        if (!course.getEnrolledStudents().remove(studentId)) {
+            return "Error: Student " + studentId + " is not active in course " + courseCode + ".";
+        }
+
+        String promotionMessage = "";
+        if (!course.getWaitlist().isEmpty()) {
+            String nextStudent = course.getWaitlist().removeFirst();
+            course.getEnrolledStudents().add(nextStudent);
+            promotionMessage = " Student " + nextStudent + " has been automatically promoted from the waitlist.";
+        }
+
+        return "Success: Student " + studentId + " dropped " + courseCode + "." + promotionMessage;
+    }
+
+    public void displayCourseStatus(String courseCode) {
+        Course course = courseCatalog.get(courseCode);
+        if (course == null) return;
+        System.out.println("\n--- Status for " + courseCode + " (" + course.getCourseName() + ") ---");
+        System.out.println("Enrolled (" + course.getEnrolledStudents().size() + "/" + course.getCapacity() + "): " + course.getEnrolledStudents());
+        System.out.println("Waitlist Queue: " + course.getWaitlist());
+    }
+}
+
+class Course {
+    private String courseCode;
+    private String courseName;
+    private int capacity;
+    private Set<String> enrolledStudents;
+    private List<String> prerequisites;
+    private LinkedList<String> waitlist;
+
+    public Course(String courseCode, String courseName, int capacity) {
+        this.courseCode = courseCode;
+        this.courseName = courseName;
+        this.capacity = capacity;
+        this.enrolledStudents = new HashSet<>();
+        this.prerequisites = new ArrayList<>();
+        this.waitlist = new LinkedList<>();
+    }
+
+    public String getCourseCode() { return courseCode; }
+    public String getCourseName() { return courseName; }
+    public int getCapacity() { return capacity; }
+    public Set<String> getEnrolledStudents() { return enrolledStudents; }
+    public List<String> getPrerequisites() { return prerequisites; }
+    public LinkedList<String> getWaitlist() { return waitlist; }
+
+    public void addPrerequisite(String prerequisiteCode) {
+        this.prerequisites.add(prerequisiteCode);
+    }
+
+    public boolean isFull() {
+        return enrolledStudents.size() >= capacity;
+    }
+}
