@@ -1,0 +1,169 @@
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.ListIterator;
+import java.util.Set;
+
+class Song {
+    private String id;
+    private String title;
+    private String artist;
+
+    public Song(String id, String title, String artist) {
+        this.id = id;
+        this.title = title;
+        this.artist = artist;
+    }
+
+    public String getId() { return id; }
+    public String getTitle() { return title; }
+    public String getArtist() { return artist; }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Song song = (Song) obj;
+        return id.equals(song.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return title + " by " + artist;
+    }
+}
+
+public class MediaPlayerQueueEngine {
+
+    public static void main(String[] args) {
+        MediaPlayerQueueEngine engine = new MediaPlayerQueueEngine();
+
+        Song s1 = new Song("S01", "Blinding Lights", "The Weeknd");
+        Song s2 = new Song("S02", "Shape of You", "Ed Sheeran");
+        Song s3 = new Song("S03", "Stay", "Kid LAROI & Justin Bieber");
+        Song s4 = new Song("S04", "As It Was", "Harry Styles");
+
+        engine.appendToQueue(s2);
+        engine.appendToQueue(s3);
+        System.out.println("Initial Queue Setup...");
+        engine.displayQueue();
+
+        System.out.println("\n--- Priority Queueing (Add to Front) ---");
+        engine.addToFront(s1);
+        engine.displayQueue();
+
+        System.out.println("\n--- Arbitrary Insertion ---");
+        engine.insertAt(2, s4);
+        engine.displayQueue();
+
+        System.out.println("\n--- Injecting Duplicate Entry ---");
+        engine.appendToQueue(new Song("S02", "Shape of You", "Ed Sheeran"));
+        engine.displayQueue();
+
+        System.out.println("\n--- Deduplicating Queue ---");
+        engine.removeDuplicates();
+        engine.displayQueue();
+
+        System.out.println("\n--- Bidirectional Traversal Operations ---");
+        engine.initializeIterator();
+        
+        System.out.println("Forward:");
+        System.out.println("Playing: " + engine.nextSong());
+        System.out.println("Playing: " + engine.nextSong());
+        System.out.println("Playing: " + engine.nextSong());
+
+        System.out.println("\nHistory Log: " + engine.getPlaybackHistory());
+
+        System.out.println("\nBackward:");
+        System.out.println("Playing Previous: " + engine.previousSong());
+        System.out.println("Playing Previous: " + engine.previousSong());
+    }
+
+    private LinkedList<Song> queue;
+    private LinkedList<Song> playbackHistory;
+    private ListIterator<Song> queueIterator;
+
+    public MediaPlayerQueueEngine() {
+        this.queue = new LinkedList<>();
+        this.playbackHistory = new LinkedList<>();
+    }
+
+    public void addToFront(Song song) {
+        queue.addFirst(song);
+        resetIterator(); 
+    }
+
+    public void appendToQueue(Song song) {
+        queue.addLast(song);
+        resetIterator();
+    }
+
+    public void insertAt(int index, Song song) {
+        if (index < 0 || index > queue.size()) {
+            throw new IndexOutOfBoundsException("Invalid insertion index position");
+        }
+        queue.add(index, song);
+        resetIterator();
+    }
+
+    public void removeDuplicates() {
+        Set<String> seenIds = new HashSet<>();
+        ListIterator<Song> cleanupIterator = queue.listIterator();
+        
+        while (cleanupIterator.hasNext()) {
+            Song current = cleanupIterator.next();
+            if (seenIds.contains(current.getId())) {
+                cleanupIterator.remove(); 
+            } else {
+                seenIds.add(current.getId());
+            }
+        }
+        resetIterator();
+    }
+
+    public void initializeIterator() {
+        this.queueIterator = queue.listIterator();
+    }
+
+    private void resetIterator() {
+        this.queueIterator = null;
+    }
+
+    public Song nextSong() {
+        if (queueIterator == null) initializeIterator();
+        
+        if (queueIterator.hasNext()) {
+            Song currentSong = queueIterator.next();
+            
+            if (playbackHistory.isEmpty() || !playbackHistory.getLast().equals(currentSong)) {
+                playbackHistory.addLast(currentSong);
+                if (playbackHistory.size() > 50) { 
+                    playbackHistory.removeFirst();
+                }
+            }
+            return currentSong;
+        }
+        return null;
+    }
+
+    public Song previousSong() {
+        if (queueIterator == null) initializeIterator();
+        
+        if (queueIterator.hasPrevious()) {
+            return queueIterator.previous();
+        }
+        return null;
+    }
+
+    public LinkedList<Song> getPlaybackHistory() {
+        return playbackHistory;
+    }
+
+    public void displayQueue() {
+        System.out.println("Current Queue Layout: " + queue);
+    }
+}
